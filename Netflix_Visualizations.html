@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Netflix Content Visualizations</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080808;
+  --s1:#111;
+  --s2:#181818;
+  --s3:#222;
+  --red:#e50914;
+  --red2:#ff1e2d;
+  --red-dim:rgba(229,9,20,.12);
+  --gold:#f5a623;
+  --teal:#00c9b1;
+  --blue:#4da8da;
+  --text:#f0f0f0;
+  --muted:#666;
+  --muted2:#999;
+  --border:rgba(255,255,255,.07);
+  --border2:rgba(255,255,255,.13);
+}
+html{scroll-behavior:smooth}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* scanline texture */
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);
+}
+
+/* ── HEADER ── */
+.header{
+  padding:52px 56px 0;
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:end;
+  gap:32px;
+}
+.header-eyebrow{
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:.28em;text-transform:uppercase;
+  color:var(--red);margin-bottom:12px;
+  display:flex;align-items:center;gap:10px;
+}
+.header-eyebrow::before{content:'';width:24px;height:1px;background:var(--red);}
+h1{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(48px,7vw,88px);
+  letter-spacing:.04em;
+  line-height:.95;
+  color:var(--text);
+}
+h1 span{
+  -webkit-text-stroke:1px var(--red);
+  color:transparent;
+}
+.header-stats{
+  display:flex;flex-direction:column;gap:18px;
+  padding-bottom:8px;
+}
+.hstat{
+  text-align:right;
+  border-right:2px solid var(--border2);
+  padding-right:16px;
+}
+.hstat-n{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:32px;letter-spacing:.04em;
+  line-height:1;color:var(--red);
+}
+.hstat-l{font-size:10px;color:var(--muted2);font-family:'DM Mono',monospace;letter-spacing:.1em;}
+
+.header-rule{
+  height:1px;background:var(--border);
+  margin:36px 56px 0;
+  position:relative;
+}
+.header-rule::before{
+  content:'';position:absolute;left:0;top:0;
+  width:120px;height:1px;background:var(--red);
+}
+
+/* ── NAV ── */
+.nav{
+  display:flex;gap:0;padding:0 56px;
+  border-bottom:1px solid var(--border);
+  overflow-x:auto;
+}
+.nav-item{
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  padding:14px 20px;cursor:pointer;color:var(--muted2);
+  border-bottom:2px solid transparent;
+  transition:all .2s;white-space:nowrap;
+  text-decoration:none;
+}
+.nav-item:hover{color:var(--text);}
+.nav-item.active{color:var(--red);border-bottom-color:var(--red);}
+
+/* ── SECTIONS ── */
+.section{padding:52px 56px;border-bottom:1px solid var(--border);}
+.sec-tag{
+  font-family:'DM Mono',monospace;
+  font-size:9px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:10px;
+  display:flex;align-items:center;gap:8px;
+}
+.sec-tag::before{content:'';width:16px;height:1px;background:var(--muted);}
+h2{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(28px,4vw,42px);letter-spacing:.04em;
+  line-height:1;margin-bottom:8px;
+}
+.sec-desc{
+  font-size:13px;color:var(--muted2);line-height:1.7;
+  max-width:620px;margin-bottom:36px;
+  font-family:'DM Mono',monospace;
+}
+
+/* ── PANELS ── */
+.panel{
+  background:var(--s1);
+  border:1px solid var(--border);
+  border-radius:2px;
+  padding:24px 26px;
+  position:relative;
+}
+.panel::before{
+  content:'';position:absolute;
+  top:0;left:0;width:3px;height:100%;
+  background:var(--panel-line, var(--red));
+}
+.ptag{
+  font-family:'DM Mono',monospace;
+  font-size:9px;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:14px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.pill{
+  font-size:9px;padding:2px 8px;border-radius:1px;
+  background:var(--red-dim);color:var(--red);
+  font-family:'DM Mono',monospace;letter-spacing:.06em;
+}
+
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.cw{position:relative;width:100%;}
+.h220{height:220px}.h280{height:280px}.h320{height:320px}.h360{height:360px}
+
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:12px;}
+.li{display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);}
+.ld{width:8px;height:8px;border-radius:1px;flex-shrink:0;}
+
+/* ── KPI ROW ── */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+.kpi{background:var(--s2);border:1px solid var(--border);border-radius:2px;padding:18px 20px;position:relative;overflow:hidden;}
+.kpi::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:var(--kpi-c,var(--red));opacity:.4;}
+.kpi-n{font-family:'Bebas Neue',sans-serif;font-size:34px;letter-spacing:.04em;line-height:1;color:var(--kpi-c,var(--red));margin-bottom:4px;}
+.kpi-l{font-size:11px;color:var(--muted2);font-family:'DM Mono',monospace;letter-spacing:.06em;}
+
+/* ── HEATMAP ── */
+.heatmap-grid{
+  display:grid;
+  grid-template-columns:48px repeat(12,1fr);
+  gap:3px;
+  margin-top:4px;
+}
+.hm-cell{
+  height:36px;border-radius:1px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'DM Mono',monospace;font-size:9px;
+  cursor:default;transition:transform .15s,filter .15s;
+}
+.hm-cell:hover{transform:scale(1.1);filter:brightness(1.3);z-index:2;}
+.hm-row-label{
+  font-family:'DM Mono',monospace;font-size:9px;
+  color:var(--muted);display:flex;align-items:center;
+  justify-content:flex-end;padding-right:6px;
+  letter-spacing:.04em;
+}
+.hm-col-labels{
+  display:grid;
+  grid-template-columns:48px repeat(12,1fr);
+  gap:3px;margin-bottom:4px;
+}
+.hm-col-label{
+  font-family:'DM Mono',monospace;font-size:8px;
+  color:var(--muted);text-align:center;letter-spacing:.06em;
+}
+
+/* ── MAP SVG ── */
+#mapSvg{width:100%;height:auto;display:block;}
+.country-base{fill:#1e1e1e;stroke:#111;stroke-width:.5;}
+.country-active{stroke:#111;stroke-width:.5;cursor:pointer;transition:filter .2s;}
+.country-active:hover{filter:brightness(1.4);}
+.map-tooltip{
+  position:absolute;background:var(--s2);
+  border:1px solid var(--border2);border-radius:2px;
+  padding:10px 14px;font-size:11px;pointer-events:none;
+  display:none;z-index:10;min-width:140px;
+  font-family:'DM Mono',monospace;
+}
+.map-tooltip strong{color:var(--red);display:block;font-size:13px;margin-bottom:3px;}
+.map-legend{
+  display:flex;align-items:center;gap:10px;margin-top:14px;
+  font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);
+}
+.map-legend-bar{
+  flex:1;height:6px;border-radius:1px;
+  background:linear-gradient(90deg,#1e1e1e,#6b0c12,var(--red),#ff6b35,var(--gold));
+}
+
+/* ── DONUT CENTER ── */
+.donut-wrap{position:relative;}
+.donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;}
+.donut-big{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.04em;color:var(--red);line-height:1;}
+.donut-sm{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.08em;}
+
+/* ── BAR RANKS ── */
+.bar-rank{display:flex;flex-direction:column;gap:8px;margin-top:4px;}
+.br-row{display:grid;grid-template-columns:160px 1fr 52px;align-items:center;gap:10px;}
+.br-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.br-track{height:7px;background:rgba(255,255,255,.05);border-radius:1px;overflow:hidden;}
+.br-fill{height:100%;border-radius:1px;transition:width 1.2s cubic-bezier(.4,0,.2,1);}
+.br-val{font-family:'DM Mono',monospace;font-size:10px;font-weight:500;text-align:right;}
+
+/* footer */
+.footer{text-align:center;padding:28px;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.15em;}
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<div class="header">
+  <div>
+    <p class="header-eyebrow">Content Analytics · 2013–2021</p>
+    <h1>NETFLIX<br><span>CONTENT</span><br>ATLAS</h1>
+  </div>
+  <div class="header-stats">
+    <div class="hstat"><div class="hstat-n">8,807</div><div class="hstat-l">Total Titles</div></div>
+    <div class="hstat"><div class="hstat-n" style="color:var(--teal)">6,131</div><div class="hstat-l">Movies</div></div>
+    <div class="hstat"><div class="hstat-n" style="color:var(--gold)">2,676</div><div class="hstat-l">TV Shows</div></div>
+  </div>
+</div>
+<div class="header-rule"></div>
+
+<!-- ── NAV ── -->
+<nav class="nav">
+  <a class="nav-item active" href="#growth">Content Growth</a>
+  <a class="nav-item" href="#genres">Genre Distribution</a>
+  <a class="nav-item" href="#map">Country Map</a>
+</nav>
+
+<!-- ════════════════════════════════════
+     SECTION 1 — CONTENT GROWTH
+════════════════════════════════════ -->
+<section class="section" id="growth">
+  <p class="sec-tag">01 · Temporal Analysis</p>
+  <h2>Content Growth Over Years</h2>
+  <p class="sec-desc">From 11 titles in 2013 to 1,498 at peak in 2019 — Netflix's catalog expanded 136× in six years, driven primarily by aggressive movie acquisitions.</p>
+
+  <div class="kpi-row">
+    <div class="kpi" style="--kpi-c:var(--red)"><div class="kpi-n">2019</div><div class="kpi-l">Peak Year Added</div></div>
+    <div class="kpi" style="--kpi-c:var(--gold)"><div class="kpi-n">2,016</div><div class="kpi-l">Titles That Year</div></div>
+    <div class="kpi" style="--kpi-c:var(--teal)"><div class="kpi-n">230%</div><div class="kpi-l">Growth 2016→17</div></div>
+    <div class="kpi" style="--kpi-c:var(--blue)"><div class="kpi-n">−30%</div><div class="kpi-l">Drop 2019→20</div></div>
+  </div>
+
+  <!-- Stacked area -->
+  <div class="panel" style="margin-bottom:16px;">
+    <div class="ptag">Cumulative titles added per year <span class="pill">2013 – 2021</span></div>
+    <div class="legend">
+      <div class="li"><div class="ld" style="background:var(--red)"></div>Movies</div>
+      <div class="li"><div class="ld" style="background:var(--teal)"></div>TV Shows</div>
+    </div>
+    <div class="cw h320"><canvas id="stackedArea"></canvas></div>
+  </div>
+
+  <div class="g2">
+    <!-- YoY growth bar -->
+    <div class="panel" style="--panel-line:var(--gold)">
+      <div class="ptag">Year-over-year growth rate</div>
+      <div class="cw h280"><canvas id="yoyChart"></canvas></div>
+    </div>
+
+    <!-- Monthly heatmap -->
+    <div class="panel" style="--panel-line:var(--teal)">
+      <div class="ptag">Monthly additions heatmap <span class="pill">2016–2021</span></div>
+      <div class="hm-col-labels">
+        <div class="hm-col-label"></div>
+        <div class="hm-col-label">Jan</div><div class="hm-col-label">Feb</div>
+        <div class="hm-col-label">Mar</div><div class="hm-col-label">Apr</div>
+        <div class="hm-col-label">May</div><div class="hm-col-label">Jun</div>
+        <div class="hm-col-label">Jul</div><div class="hm-col-label">Aug</div>
+        <div class="hm-col-label">Sep</div><div class="hm-col-label">Oct</div>
+        <div class="hm-col-label">Nov</div><div class="hm-col-label">Dec</div>
+      </div>
+      <div class="heatmap-grid" id="heatmapGrid"></div>
+      <div class="map-legend" style="margin-top:10px;">
+        <span>Low</span>
+        <div style="flex:1;height:5px;border-radius:1px;background:linear-gradient(90deg,#1a1a1a,#6b0c12,var(--red),#ff6b6b);"></div>
+        <span>High</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════
+     SECTION 2 — GENRE DISTRIBUTION
+════════════════════════════════════ -->
+<section class="section" id="genres">
+  <p class="sec-tag">02 · Content Taxonomy</p>
+  <h2>Genre Distribution</h2>
+  <p class="sec-desc">International Movies dominate at 2,752 titles — Netflix's global-first strategy in action. Dramas and Comedies are universal anchors across both Movies and TV.</p>
+
+  <div class="g2" style="margin-bottom:16px; align-items:start;">
+
+    <!-- Donut + legend -->
+    <div class="panel" style="--panel-line:var(--red)">
+      <div class="ptag">Top 8 genres — share of catalog</div>
+      <div class="donut-wrap cw h320">
+        <canvas id="genreDonut"></canvas>
+        <div class="donut-center">
+          <div class="donut-big">15</div>
+          <div class="donut-sm">Genres</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Horizontal bars top 15 -->
+    <div class="panel" style="--panel-line:var(--gold)">
+      <div class="ptag">Top 15 genres by title count</div>
+      <div class="bar-rank" id="genreBars"></div>
+    </div>
+  </div>
+
+  <!-- Movie vs TV split per genre -->
+  <div class="panel" style="--panel-line:var(--teal)">
+    <div class="ptag">Genre — Movie vs TV Show split (top 10)</div>
+    <div class="legend">
+      <div class="li"><div class="ld" style="background:var(--red)"></div>Movies</div>
+      <div class="li"><div class="ld" style="background:var(--teal)"></div>TV Shows</div>
+    </div>
+    <div class="cw h280"><canvas id="genreSplit"></canvas></div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════
+     SECTION 3 — COUNTRY MAP
+════════════════════════════════════ -->
+<section class="section" id="map">
+  <p class="sec-tag">03 · Global Production</p>
+  <h2>Country Production Map</h2>
+  <p class="sec-desc">Netflix sources content from 80+ countries. The United States leads with 3,690 titles — nearly as much as the rest of the top 30 combined. India is a distant but clear second at 1,046.</p>
+
+  <div style="position:relative;">
+    <div id="mapTooltip" class="map-tooltip"></div>
+
+    <!-- SVG World Map — key countries as simplified paths -->
+    <div class="panel" style="--panel-line:var(--red);padding:20px 20px 14px;">
+      <div class="ptag">Title count by country of production — hover for details</div>
+      <svg id="mapSvg" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg">
+
+        <!-- Ocean -->
+        <rect width="1000" height="500" fill="#0d0d0d"/>
+
+        <!-- Country paths (simplified but recognizable shapes) -->
+        <!-- USA -->
+        <path class="country-active" d="M60,140 L220,135 L240,165 L230,200 L190,215 L160,210 L140,230 L110,225 L80,205 L55,185 Z" fill="#e50914" data-c="United States" data-n="3,690"/>
+        <!-- Canada -->
+        <path class="country-active" d="M60,80 L240,75 L250,135 L220,135 L60,140 Z" fill="#9b0610" data-c="Canada" data-n="445"/>
+        <!-- Mexico -->
+        <path class="country-active" d="M80,215 L160,210 L170,240 L155,260 L120,258 L85,235 Z" fill="#6b0c12" data-c="Mexico" data-n="169"/>
+        <!-- Colombia -->
+        <path class="country-active" d="M155,265 L185,262 L192,290 L168,295 L148,282 Z" fill="#3d0a0a" data-c="Colombia" data-n="52"/>
+        <!-- Brazil -->
+        <path class="country-active" d="M185,262 L240,255 L258,280 L250,330 L215,345 L190,325 L175,295 Z" fill="#4a0d10" data-c="Brazil" data-n="97"/>
+        <!-- Argentina -->
+        <path class="country-active" d="M190,330 L215,345 L210,385 L195,395 L178,370 L180,340 Z" fill="#330a0a" data-c="Argentina" data-n="91"/>
+        <!-- UK -->
+        <path class="country-active" d="M395,95 L415,90 L420,115 L400,118 Z" fill="#8b0610" data-c="United Kingdom" data-n="806"/>
+        <!-- Ireland -->
+        <path class="country-active" d="M383,97 L394,94 L395,113 L383,112 Z" fill="#2d0a0a" data-c="Ireland" data-n="46"/>
+        <!-- France -->
+        <path class="country-active" d="M400,118 L430,114 L438,140 L420,150 L400,142 Z" fill="#7a0c14" data-c="France" data-n="393"/>
+        <!-- Spain -->
+        <path class="country-active" d="M390,148 L422,145 L428,168 L395,172 Z" fill="#5c0c12" data-c="Spain" data-n="232"/>
+        <!-- Netherlands/Belgium -->
+        <path class="country-active" d="M420,108 L445,105 L448,120 L418,122 Z" fill="#330a0a" data-c="Belgium" data-n="90"/>
+        <!-- Germany -->
+        <path class="country-active" d="M430,108 L460,104 L468,130 L436,134 Z" fill="#5a0d12" data-c="Germany" data-n="226"/>
+        <!-- Denmark -->
+        <path class="country-active" d="M440,90 L458,87 L460,104 L440,106 Z" fill="#1e0808" data-c="Denmark" data-n="48"/>
+        <!-- Sweden -->
+        <path class="country-active" d="M450,65 L472,60 L476,100 L455,104 Z" fill="#1e0808" data-c="Sweden" data-n="42"/>
+        <!-- Italy -->
+        <path class="country-active" d="M430,140 L460,135 L468,158 L448,168 L432,162 Z" fill="#3d0a0a" data-c="Italy" data-n="100"/>
+        <!-- Turkey -->
+        <path class="country-active" d="M480,148 L530,143 L535,162 L480,167 Z" fill="#3d0a0a" data-c="Turkey" data-n="113"/>
+        <!-- Egypt -->
+        <path class="country-active" d="M458,190 L498,186 L502,215 L460,218 Z" fill="#3d0a0a" data-c="Egypt" data-n="117"/>
+        <!-- Nigeria -->
+        <path class="country-active" d="M415,245 L448,242 L452,268 L416,270 Z" fill="#2d0a0a" data-c="Nigeria" data-n="103"/>
+        <!-- South Africa -->
+        <path class="country-active" d="M455,330 L490,325 L492,360 L458,362 Z" fill="#2d0a0a" data-c="South Africa" data-n="62"/>
+        <!-- India -->
+        <path class="country-active" d="M578,170 L628,163 L638,205 L620,240 L590,250 L565,225 L560,195 Z" fill="#a00c18" data-c="India" data-n="1,046"/>
+        <!-- Japan -->
+        <path class="country-active" d="M762,148 L785,143 L795,168 L772,175 Z" fill="#6b0c12" data-c="Japan" data-n="318"/>
+        <!-- South Korea -->
+        <path class="country-active" d="M750,168 L772,165 L775,185 L750,188 Z" fill="#5a0d12" data-c="South Korea" data-n="231"/>
+        <!-- China -->
+        <path class="country-active" d="M668,148 L748,140 L755,168 L738,185 L680,182 L658,170 Z" fill="#6b0c12" data-c="China" data-n="162"/>
+        <!-- Hong Kong -->
+        <path class="country-active" d="M735,185 L752,183 L755,195 L733,198 Z" fill="#2d0a0a" data-c="Hong Kong" data-n="105"/>
+        <!-- Taiwan -->
+        <path class="country-active" d="M752,195 L765,193 L768,208 L750,210 Z" fill="#2d0a0a" data-c="Taiwan" data-n="89"/>
+        <!-- Philippines -->
+        <path class="country-active" d="M752,228 L778,224 L782,248 L752,252 Z" fill="#1e0808" data-c="Philippines" data-n="83"/>
+        <!-- Indonesia -->
+        <path class="country-active" d="M698,265 L758,258 L770,278 L760,290 L700,288 Z" fill="#1e0808" data-c="Indonesia" data-n="90"/>
+        <!-- Thailand -->
+        <path class="country-active" d="M700,228 L724,224 L728,248 L702,252 Z" fill="#1e0808" data-c="Thailand" data-n="70"/>
+        <!-- Australia -->
+        <path class="country-active" d="M752,320 L838,312 L845,368 L800,390 L745,378 Z" fill="#3d0a0a" data-c="Australia" data-n="160"/>
+
+        <!-- Country labels for top producers -->
+        <text x="148" y="180" font-family="DM Sans" font-size="8.5" fill="rgba(255,255,255,.7)" text-anchor="middle" font-weight="500">USA</text>
+        <text x="407" y="105" font-family="DM Sans" font-size="7" fill="rgba(255,255,255,.6)" text-anchor="middle">UK</text>
+        <text x="602" y="210" font-family="DM Sans" font-size="8" fill="rgba(255,255,255,.7)" text-anchor="middle">India</text>
+        <text x="773" y="158" font-family="DM Sans" font-size="7.5" fill="rgba(255,255,255,.6)" text-anchor="middle">Japan</text>
+        <text x="762" y="179" font-family="DM Sans" font-size="6.5" fill="rgba(255,255,255,.5)" text-anchor="middle">S.Korea</text>
+        <text x="706" y="162" font-family="DM Sans" font-size="7.5" fill="rgba(255,255,255,.6)" text-anchor="middle">China</text>
+        <text x="414" y="130" font-family="DM Sans" font-size="7" fill="rgba(255,255,255,.6)" text-anchor="middle">France</text>
+        <text x="448" y="120" font-family="DM Sans" font-size="7" fill="rgba(255,255,255,.6)" text-anchor="middle">Ger.</text>
+        <text x="795" y="355" font-family="DM Sans" font-size="7" fill="rgba(255,255,255,.55)" text-anchor="middle">Australia</text>
+
+        <!-- Scale legend -->
+        <text x="20" y="490" font-family="DM Mono" font-size="8" fill="#555" letter-spacing=".1em">PRODUCTION VOLUME</text>
+        <rect x="140" y="482" width="80" height="5" rx="1"
+          fill="url(#mapGrad)"/>
+        <text x="140" y="496" font-family="DM Mono" font-size="7" fill="#555">Low</text>
+        <text x="212" y="496" font-family="DM Mono" font-size="7" fill="#555">High</text>
+        <defs>
+          <linearGradient id="mapGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#1a1a1a"/>
+            <stop offset="40%" stop-color="#6b0c12"/>
+            <stop offset="75%" stop-color="#e50914"/>
+            <stop offset="100%" stop-color="#f5a623"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+
+    <!-- Top countries ranked bars -->
+    <div class="panel" style="margin-top:16px;--panel-line:var(--gold)">
+      <div class="ptag">Top 20 countries by title count</div>
+      <div class="bar-rank" id="countryBars"></div>
+    </div>
+  </div>
+</section>
+
+<div class="footer">NETFLIX CONTENT ATLAS &nbsp;·&nbsp; 8,807 TITLES &nbsp;·&nbsp; 2013–2021</div>
+
+<script>
+/* ── DATA ── */
+const TREND = {"years":[2013,2014,2015,2016,2017,2018,2019,2020,2021],"movies":[6,19,56,253,839,1237,1424,1284,993],"shows":[5,5,26,176,349,412,592,595,505]};
+const GENRES = {"labels":["International Movies","Dramas","Comedies","International TV Shows","Documentaries","Action & Adventure","TV Dramas","Independent Movies","Children & Family Movies","Romantic Movies","TV Comedies","Thrillers","Crime TV Shows","Kids' TV","Docuseries"],"values":[2752,2427,1674,1351,869,859,763,756,641,616,581,577,470,451,395]};
+const GENRE_SPLIT = {"labels":["Intl. Movies","Dramas","Comedies","Intl. TV Shows","Documentaries","Action & Adv.","TV Dramas","Indie Movies","Kids & Family","Romantic"],"movies":[2752,2427,1674,0,869,859,0,756,641,616],"shows":[0,0,0,1351,0,0,763,0,0,0]};
+const COUNTRIES = [["United States",3690],["India",1046],["United Kingdom",806],["Canada",445],["France",393],["Japan",318],["Spain",232],["South Korea",231],["Germany",226],["Mexico",169],["China",162],["Australia",160],["Egypt",117],["Turkey",113],["Hong Kong",105],["Nigeria",103],["Italy",100],["Brazil",97],["Argentina",91],["Belgium",90]];
+const MONTHLY = [{"year":2016,"month":1,"count":43},{"year":2016,"month":2,"count":15},{"year":2016,"month":3,"count":17},{"year":2016,"month":4,"count":22},{"year":2016,"month":5,"count":13},{"year":2016,"month":6,"count":18},{"year":2016,"month":7,"count":28},{"year":2016,"month":8,"count":34},{"year":2016,"month":9,"count":48},{"year":2016,"month":10,"count":51},{"year":2016,"month":11,"count":44},{"year":2016,"month":12,"count":96},{"year":2017,"month":1,"count":72},{"year":2017,"month":2,"count":82},{"year":2017,"month":3,"count":125},{"year":2017,"month":4,"count":93},{"year":2017,"month":5,"count":86},{"year":2017,"month":6,"count":94},{"year":2017,"month":7,"count":79},{"year":2017,"month":8,"count":115},{"year":2017,"month":9,"count":113},{"year":2017,"month":10,"count":126},{"year":2017,"month":11,"count":85},{"year":2017,"month":12,"count":118},{"year":2018,"month":1,"count":129},{"year":2018,"month":2,"count":87},{"year":2018,"month":3,"count":173},{"year":2018,"month":4,"count":115},{"year":2018,"month":5,"count":97},{"year":2018,"month":6,"count":78},{"year":2018,"month":7,"count":152},{"year":2018,"month":8,"count":164},{"year":2018,"month":9,"count":124},{"year":2018,"month":10,"count":191},{"year":2018,"month":11,"count":154},{"year":2018,"month":12,"count":185},{"year":2019,"month":1,"count":153},{"year":2019,"month":2,"count":148},{"year":2019,"month":3,"count":172},{"year":2019,"month":4,"count":162},{"year":2019,"month":5,"count":139},{"year":2019,"month":6,"count":168},{"year":2019,"month":7,"count":157},{"year":2019,"month":8,"count":131},{"year":2019,"month":9,"count":123},{"year":2019,"month":10,"count":193},{"year":2019,"month":11,"count":255},{"year":2019,"month":12,"count":215},{"year":2020,"month":1,"count":205},{"year":2020,"month":2,"count":114},{"year":2020,"month":3,"count":137},{"year":2020,"month":4,"count":177},{"year":2020,"month":5,"count":157},{"year":2020,"month":6,"count":156},{"year":2020,"month":7,"count":146},{"year":2020,"month":8,"count":129},{"year":2020,"month":9,"count":168},{"year":2020,"month":10,"count":167},{"year":2020,"month":11,"count":154},{"year":2020,"month":12,"count":169},{"year":2021,"month":1,"count":132},{"year":2021,"month":2,"count":109},{"year":2021,"month":3,"count":112},{"year":2021,"month":4,"count":188},{"year":2021,"month":5,"count":132},{"year":2021,"month":6,"count":207},{"year":2021,"month":7,"count":257},{"year":2021,"month":8,"count":178},{"year":2021,"month":9,"count":183}];
+
+const RED='#e50914',TEAL='#00c9b1',GOLD='#f5a623',BLUE='#4da8da';
+const MUTED='rgba(150,150,150,.6)',GRID='rgba(255,255,255,.04)';
+const TIP={backgroundColor:'#161616',borderColor:'rgba(255,255,255,.1)',borderWidth:1,titleColor:'#f0f0f0',bodyColor:'#888',padding:10,titleFont:{family:"'DM Mono',monospace",size:10},bodyFont:{family:"'DM Mono',monospace",size:11}};
+Chart.defaults.font.family="'DM Mono',monospace";
+Chart.defaults.color=MUTED;
+
+/* ── 1. Stacked area ── */
+const totals = TREND.years.map((_,i)=>TREND.movies[i]+TREND.shows[i]);
+new Chart(document.getElementById('stackedArea'),{
+  type:'line',
+  data:{
+    labels:TREND.years,
+    datasets:[
+      {label:'Movies',data:TREND.movies,borderColor:RED,backgroundColor:ctx=>{const g=ctx.chart.ctx.createLinearGradient(0,0,0,320);g.addColorStop(0,'rgba(229,9,20,.35)');g.addColorStop(1,'rgba(229,9,20,0)');return g;},fill:true,tension:.4,pointRadius:4,pointBackgroundColor:RED,borderWidth:2.5},
+      {label:'TV Shows',data:TREND.shows,borderColor:TEAL,backgroundColor:ctx=>{const g=ctx.chart.ctx.createLinearGradient(0,0,0,320);g.addColorStop(0,'rgba(0,201,177,.2)');g.addColorStop(1,'rgba(0,201,177,0)');return g;},fill:true,tension:.4,pointRadius:4,pointBackgroundColor:TEAL,borderWidth:2}
+    ]
+  },
+  options:{responsive:true,maintainAspectRatio:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{...TIP,callbacks:{label:c=>` ${c.dataset.label}: ${c.raw.toLocaleString()}`}}},
+    scales:{
+      x:{ticks:{color:MUTED,font:{size:10}},grid:{color:GRID},border:{color:'transparent'}},
+      y:{ticks:{color:MUTED,font:{size:9},callback:v=>v>=1000?`${(v/1000).toFixed(1)}k`:v},grid:{color:GRID},border:{color:'transparent'}}
+    }
+  }
+});
+
+/* ── 2. YoY chart ── */
+const yoyVals = totals.map((v,i)=>i===0?0:Math.round((v-totals[i-1])/totals[i-1]*100));
+new Chart(document.getElementById('yoyChart'),{
+  type:'bar',
+  data:{
+    labels:TREND.years,
+    datasets:[{label:'YoY Growth %',data:yoyVals,backgroundColor:yoyVals.map(v=>v>=0?'rgba(229,9,20,.75)':'rgba(0,201,177,.6)'),borderRadius:1}]
+  },
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{...TIP,callbacks:{label:c=>` ${c.raw}%`}}},
+    scales:{
+      x:{ticks:{color:MUTED,font:{size:9}},grid:{color:GRID},border:{color:'transparent'}},
+      y:{ticks:{color:MUTED,font:{size:9},callback:v=>v+'%'},grid:{color:GRID},border:{color:'transparent'}}
+    }
+  }
+});
+
+/* ── 3. Monthly heatmap ── */
+const allCounts = MONTHLY.map(d=>d.count);
+const maxC = Math.max(...allCounts), minC = Math.min(...allCounts);
+function heatColor(v){
+  const t=(v-minC)/(maxC-minC);
+  if(t<0.25) return{bg:`rgba(30,10,10,${0.4+t*2})`,text:'rgba(255,255,255,.3)'};
+  if(t<0.5) return{bg:`rgba(107,12,18,${0.6+t})`,text:'rgba(255,255,255,.55)'};
+  if(t<0.75) return{bg:`rgba(180,10,20,${0.7+t*0.3})`,text:'rgba(255,255,255,.8)'};
+  return{bg:`rgba(229,9,20,${0.7+t*0.3})`,text:'#fff'};
+}
+const grid = document.getElementById('heatmapGrid');
+[2016,2017,2018,2019,2020,2021].forEach(yr=>{
+  const label = document.createElement('div');
+  label.className='hm-row-label'; label.textContent=yr;
+  grid.appendChild(label);
+  for(let m=1;m<=12;m++){
+    const entry = MONTHLY.find(d=>d.year===yr&&d.month===m);
+    const v = entry?entry.count:0;
+    const c = heatColor(v);
+    const cell = document.createElement('div');
+    cell.className='hm-cell';
+    cell.style.background=c.bg; cell.style.color=c.text;
+    cell.textContent=v||'';
+    cell.title=`${yr}-${String(m).padStart(2,'0')}: ${v} titles`;
+    grid.appendChild(cell);
+  }
+});
+
+/* ── 4. Genre donut ── */
+const donutColors=['#e50914','#b81d24','#8b0000','#00c9b1','#009e8e','#f5a623','#d4820a','#4da8da'];
+new Chart(document.getElementById('genreDonut'),{
+  type:'doughnut',
+  data:{
+    labels:GENRES.labels.slice(0,8),
+    datasets:[{data:GENRES.values.slice(0,8),backgroundColor:donutColors,borderWidth:0,hoverOffset:8}]
+  },
+  options:{responsive:true,maintainAspectRatio:false,cutout:'68%',
+    plugins:{legend:{position:'right',labels:{boxWidth:8,font:{size:9},color:'rgba(150,150,150,.8)',padding:10}},
+      tooltip:{...TIP,callbacks:{label:c=>` ${c.label}: ${c.raw.toLocaleString()}`}}}}
+});
+
+/* ── 5. Genre bars ── */
+const maxG = GENRES.values[0];
+const genrePalette=['#e50914','#d41020','#c31030','#b20040','#a11050','#009e8e','#00b4d8','#4da8da','#6bb8e5','#83c8ef','#f5a623','#d4820a','#b36208','#924808','#712808'];
+document.getElementById('genreBars').innerHTML = GENRES.labels.map((l,i)=>`
+  <div class="br-row">
+    <span class="br-label" title="${l}">${l}</span>
+    <div class="br-track"><div class="br-fill" style="width:${(GENRES.values[i]/maxG*100).toFixed(1)}%;background:${genrePalette[i]};"></div></div>
+    <span class="br-val" style="color:${genrePalette[i]}">${GENRES.values[i].toLocaleString()}</span>
+  </div>`).join('');
+
+/* ── 6. Genre split grouped bar ── */
+new Chart(document.getElementById('genreSplit'),{
+  type:'bar',
+  data:{
+    labels:GENRE_SPLIT.labels,
+    datasets:[
+      {label:'Movies',data:GENRE_SPLIT.movies,backgroundColor:'rgba(229,9,20,.8)',borderRadius:1},
+      {label:'TV Shows',data:GENRE_SPLIT.shows,backgroundColor:'rgba(0,201,177,.7)',borderRadius:1}
+    ]
+  },
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{...TIP,callbacks:{label:c=>` ${c.dataset.label}: ${c.raw.toLocaleString()}`}}},
+    scales:{
+      x:{ticks:{color:MUTED,font:{size:9},maxRotation:30},grid:{color:GRID},border:{color:'transparent'}},
+      y:{ticks:{color:MUTED,font:{size:9}},grid:{color:GRID},border:{color:'transparent'}}
+    }
+  }
+});
+
+/* ── 7. Country bars ── */
+const maxCountry = COUNTRIES[0][1];
+const cPalette=['#e50914','#d01020','#be1030','#aa1035','#961040','#841045','#721050','#600e55','#4e0e58','#3e0e5a','#2e0e5c','#1e0e5a','#160e58','#0e0e55','#0e1050','#0e124a','#0e1440','#0e1535','#0e162a','#0e1820'];
+document.getElementById('countryBars').innerHTML = COUNTRIES.map(([name,val],i)=>`
+  <div class="br-row">
+    <span class="br-label">${name}</span>
+    <div class="br-track"><div class="br-fill" style="width:${(val/maxCountry*100).toFixed(1)}%;background:${cPalette[i]};"></div></div>
+    <span class="br-val" style="color:${cPalette[i]}">${val.toLocaleString()}</span>
+  </div>`).join('');
+
+/* ── 8. Map tooltip ── */
+const tooltip = document.getElementById('mapTooltip');
+document.querySelectorAll('.country-active').forEach(el=>{
+  el.addEventListener('mouseenter', ()=>{ tooltip.style.display='block'; });
+  el.addEventListener('mousemove', e=>{
+    const svgRect = el.closest('svg').getBoundingClientRect();
+    const wrap = el.closest('.panel');
+    const wrapRect = wrap.getBoundingClientRect();
+    tooltip.style.left = (e.clientX - wrapRect.left + 12)+'px';
+    tooltip.style.top  = (e.clientY - wrapRect.top  - 10)+'px';
+    tooltip.innerHTML  = `<strong>${el.dataset.c}</strong>${el.dataset.n} titles`;
+  });
+  el.addEventListener('mouseleave', ()=>{ tooltip.style.display='none'; });
+});
+
+/* ── Nav active state ── */
+const navItems = document.querySelectorAll('.nav-item');
+const sections = document.querySelectorAll('section');
+window.addEventListener('scroll', ()=>{
+  let cur='';
+  sections.forEach(s=>{ if(window.scrollY >= s.offsetTop - 100) cur=s.id; });
+  navItems.forEach(n=>{ n.classList.toggle('active', n.getAttribute('href')==='#'+cur); });
+},{passive:true});
+</script>
+</body>
+</html>
